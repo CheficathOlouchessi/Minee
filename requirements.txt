@@ -3,3 +3,4 @@ pandas
 numpy
 pdfplumber
 rapidfuzz
+openpyxl
