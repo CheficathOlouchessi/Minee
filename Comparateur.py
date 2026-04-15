@@ -18,6 +18,7 @@ if excel_file:
 
     # Fusionner toutes les feuilles
     df_excel = pd.concat(all_sheets.values(), ignore_index=True)
+    df_excel.columns = df_excel.columns.astype(str).str.strip()
 
     # 🔥 Supprimer les lignes totalement vides
     df_excel = df_excel.dropna(how="all")
@@ -159,8 +160,8 @@ def nettoyer_texte(texte):
 def creer_cle(df, colonnes):
 
     # Combiner + nettoyer
-    series = df[colonnes].astype(str).apply(
-        lambda row: nettoyer_texte(" ".join(row)),
+    series = df[colonnes].fillna("").astype(str).apply(
+        lambda row: nettoyer_texte(" ".join(row.values)),
         axis=1
     )
 
@@ -227,10 +228,22 @@ if st.button("Comparer"):
     if excel_file and pdf_file and colonnes_excel and colonnes_pdf:
         
         # Mapping clean → original
-        df_excel_temp = df_excel.copy()
-        df_excel_temp["original"] = df_excel[colonnes_excel].astype(str).agg(" ".join, axis=1)
-        df_excel_temp["clean"] = df_excel_temp["original"].apply(nettoyer_texte)
+        # 🔒 sécuriser colonnes Excel
+        colonnes_valides_excel = [c for c in colonnes_excel if c in df_excel.columns]
 
+        if not colonnes_valides_excel:
+            st.error("Aucune colonne Excel valide")
+            st.stop()
+
+        df_excel_temp = df_excel.copy()
+        df_excel_temp["original"] = (
+            df_excel[colonnes_valides_excel]
+            .fillna("")
+            .astype(str)
+            .apply(lambda row: " ".join(row.values), axis=1)
+        )
+        df_excel_temp["clean"] = df_excel_temp["original"].apply(nettoyer_texte)
+       
         df_pdf_temp = df_pdf.copy()
         df_pdf_temp["original"] = df_pdf[colonnes_pdf].astype(str).agg(" ".join, axis=1)
         df_pdf_temp["clean"] = df_pdf_temp["original"].apply(nettoyer_texte)
